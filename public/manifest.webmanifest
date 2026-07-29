@@ -1,0 +1,10 @@
+{
+  "name": "Futur · Planificador financer",
+  "short_name": "Futur",
+  "description": "Planificador personal de jubilació i patrimoni.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8faf8",
+  "theme_color": "#0e6b4f",
+  "lang": "ca"
+}
