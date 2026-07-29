@@ -51,7 +51,7 @@ function withdrawalFor(strategy: StrategyKey, capital: number, previous: number,
     const movement = previous > 0 ? capital / previous - 1 : 0;
     return fixed * (movement <= -0.2 ? 0.9 : movement >= 0.2 ? 1.05 : 1);
   }
-  return fixed * (capital < previous ? 0.9 : 1);
+  return Math.min(fixed, capital * 0.042);
 }
 function simulateStrategy(inputs: Inputs, scenario: Scenario, strategy: StrategyKey, seed: number): MonteCarloSummary {
   const random = makeRandom(seed); const adjustment = scenarioAdjustments[scenario]; const finals: number[] = []; let ruined = 0;
