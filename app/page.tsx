@@ -17,7 +17,7 @@ const scenarioAdjustments: Record<Scenario, { returnRate: number; inflation: num
 };
 const strategyDefinitions: Array<{ key: StrategyKey; name: string; type: string; description: string }> = [
   { key: "fixed", name: "Retirada fixa", type: "Estable", description: "Manté la retirada base actualitzada amb la inflació. És la més previsible, però no s’adapta gaire si el patrimoni cau." },
-  { key: "four_percent", name: "Regla del 4%", type: "Equilibrada", description: "Retira aproximadament un 4% del patrimoni cada any. La quantitat puja o baixa amb el saldo." },
+  { key: "four_percent", name: "Regla del 4%", type: "Equilibrada", description: "Calcula el 4% del patrimoni inicial el primer any i actualitza aquesta retirada amb la inflació, sense recalcular el 4% sobre el saldo actual." },
   { key: "guyton_klinger", name: "Guyton-Klinger", type: "Guardrails", description: "Parteix de la retirada base i l’ajusta progressivament segons si el patrimoni evoluciona millor o pitjor." },
   { key: "vpw", name: "VPW", type: "Variable", description: "Divideix el patrimoni entre els anys que queden. Busca gastar el patrimoni de manera gradual fins al final." },
   { key: "adaptive", name: "Retirada adaptativa", type: "Flexible", description: "Parteix de la retirada base i la limita si supera aproximadament el 4,2% del patrimoni." },
@@ -42,11 +42,11 @@ function normal(random: () => number) {
 function wealthTaxFor(capital: number, inputs: Inputs) { return Math.max(0, capital - inputs.wealthTaxExempt) * inputs.wealthTaxRate / 100; }
 function incomeTaxFor(previousWithdrawal: number, inputs: Inputs) { return previousWithdrawal * inputs.tax / 100; }
 
-function withdrawalFor(strategy: StrategyKey, capital: number, previous: number, initial: number, inflation: number, yearsLeft: number, horizon: number) {
+function withdrawalFor(strategy: StrategyKey, capital: number, previous: number, initial: number, inflation: number, yearsLeft: number, horizon: number, startingCapital: number) {
   if (capital <= 0) return 0;
   const fixed = initial * (1 + inflation) ** Math.max(0, horizon - yearsLeft);
   if (strategy === "fixed") return fixed;
-  if (strategy === "four_percent") return capital * 0.04;
+  if (strategy === "four_percent") return startingCapital * 0.04 * (1 + inflation) ** Math.max(0, horizon - yearsLeft);
   if (strategy === "vpw") return capital / Math.max(1, yearsLeft);
   if (strategy === "guyton_klinger") {
     const movement = previous > 0 ? capital / previous - 1 : 0;
@@ -63,7 +63,7 @@ function simulateStrategy(inputs: Inputs, scenario: Scenario, strategy: Strategy
     let failed = false; const trajectory = [capital];
     for (let year = 0; year < years; year += 1) {
       spending *= 1 + inflation;
-      const policyWithdrawal = withdrawalFor(strategy, capital, previous, initial, inflation, years - year, inputs.horizon);
+      const policyWithdrawal = withdrawalFor(strategy, capital, previous, initial, inflation, years - year, inputs.horizon, inputs.capital);
       const wealthTax = wealthTaxFor(capital, inputs); const irpf = year === 0 ? 0 : incomeTaxFor(previousWithdrawal, inputs); const withdrawal = policyWithdrawal + wealthTax + irpf;
       const annualReturn = Math.max(-0.95, nominalReturn + normal(random) * 0.12);
       previous = capital; capital = Math.max(0, (capital - withdrawal) * (1 + annualReturn)); previousWithdrawal = withdrawal; trajectory.push(capital);
