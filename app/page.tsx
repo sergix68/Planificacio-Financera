@@ -49,7 +49,8 @@ function withdrawalFor(strategy: StrategyKey, capital: number, previous: number,
   if (strategy === "vpw") return capital / Math.max(1, yearsLeft);
   if (strategy === "guyton_klinger") {
     const movement = previous > 0 ? capital / previous - 1 : 0;
-    return fixed * (movement <= -0.2 ? 0.9 : movement >= 0.2 ? 1.05 : 1);
+    const guardrail = movement <= -0.2 ? 0.9 : movement >= 0.2 ? 1.05 : 0.9 + ((movement + 0.2) / 0.4) * 0.15;
+    return fixed * guardrail;
   }
   return Math.min(fixed, capital * 0.042);
 }
