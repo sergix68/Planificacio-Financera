@@ -74,8 +74,8 @@ function simulateStrategy(inputs: Inputs, scenario: Scenario, strategy: Strategy
   finals.sort((a, b) => a - b);
   return { simulations, ruinProbability: ruined / simulations, median: quantile(finals, 0.5), p10: quantile(finals, 0.1), p90: quantile(finals, 0.9), path: Array.from({ length: years + 1 }, (_, year) => quantile(paths.map((trajectory) => trajectory[year]), 0.5)) };
 }
-function simulateAll(inputs: Inputs, scenario: Scenario, run: number) {
-  return Object.fromEntries(strategyDefinitions.map((definition, index) => [definition.key, simulateStrategy(inputs, scenario, definition.key, 42 + run * 97 + index * 1009)])) as Record<StrategyKey, MonteCarloSummary>;
+function simulateAll(inputs: Inputs, scenario: Scenario) {
+  return Object.fromEntries(strategyDefinitions.map((definition, index) => [definition.key, simulateStrategy(inputs, scenario, definition.key, 42 + index * 1009)])) as Record<StrategyKey, MonteCarloSummary>;
 }
 
 function QuickControls({ scenario, selectedStrategy, onScenario, onStrategy, onImport, onSave, importStatus }: { scenario: Scenario; selectedStrategy: StrategyKey; onScenario: (value: Scenario) => void; onStrategy: (value: StrategyKey) => void; onImport: (file: File) => void; onSave: () => void; importStatus: string }) {
@@ -102,7 +102,7 @@ function DataPanel({ inputs, scenario, onSave, onImport, importStatus }: { input
 export default function Home() {
   const [scenario, setScenario] = useState<Scenario>("realist"); const [selectedStrategy, setSelectedStrategy] = useState<StrategyKey>("adaptive"); const [inputs, setInputs] = useState<Inputs>(defaults); const [activeView, setActiveView] = useState("Resum"); const [runCount, setRunCount] = useState(0); const [saved, setSaved] = useState(false); const [importStatus, setImportStatus] = useState("Encara no has carregat cap fitxer."); const [chartScale, setChartScale] = useState(1);
   useEffect(() => { const raw = localStorage.getItem("futur-plan"); if (!raw) return; try { const parsed = JSON.parse(raw) as { inputs?: Partial<Inputs>; scenario?: Scenario; selectedStrategy?: StrategyKey }; if (parsed.inputs) setInputs(normalizeInputs(parsed.inputs)); if (parsed.scenario && parsed.scenario in scenarioLabels) setScenario(parsed.scenario); if (parsed.selectedStrategy && strategyDefinitions.some((definition) => definition.key === parsed.selectedStrategy)) setSelectedStrategy(parsed.selectedStrategy); setSaved(true); } catch { localStorage.removeItem("futur-plan"); } }, []);
-  const results = useMemo(() => simulateAll(inputs, scenario, runCount), [inputs, scenario, runCount]); const activeResult = results[selectedStrategy]; const selectedStrategyLabel = strategyDefinitions.find((definition) => definition.key === selectedStrategy)?.name ?? "Adaptativa";
+  const results = useMemo(() => simulateAll(inputs, scenario), [inputs, scenario]); const activeResult = results[selectedStrategy]; const selectedStrategyLabel = strategyDefinitions.find((definition) => definition.key === selectedStrategy)?.name ?? "Adaptativa";
   const projection = useMemo(() => ({ balances: activeResult.path, terminal: activeResult.median }), [activeResult]); const chartMax = Math.max(5000000, inputs.capital * 1.25); const medianLegacy = activeResult.median * 0.72; const finalAge = inputs.age + inputs.horizon;
   const updateInput = (key: keyof Inputs, value: number) => { setSaved(false); setInputs((current) => ({ ...current, [key]: value })); };
   const savePlan = () => { localStorage.setItem("futur-plan", JSON.stringify({ inputs, scenario, selectedStrategy })); setSaved(true); };
